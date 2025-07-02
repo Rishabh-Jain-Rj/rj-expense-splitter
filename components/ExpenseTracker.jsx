@@ -296,8 +296,12 @@ export default function ExpenseTracker() {
         <div className="flex items-center space-x-3">
           <Receipt className="h-8 w-8" />
           <div>
-            <h1 className="text-3xl font-bold">RJ Expense Splitter</h1>
-            <p className="text-blue-100">Split expenses with friends easily</p>
+            <h1 className="md:text-3xl text-base font-bold">
+              RJ Expense Splitter
+            </h1>
+            <p className="text-blue-100 text-xs md:text-base">
+              Split expenses with friends easily
+            </p>
           </div>
         </div>
         <div className="text-right">
