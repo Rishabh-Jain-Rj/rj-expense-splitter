@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import ExpenseReceiptPDF from "./ExpenseReceiptPDF";
-import data from "./data.json";
 
 export default function ExpenseTracker() {
   const [users, setUsers] = useState([]);
@@ -341,21 +340,6 @@ export default function ExpenseTracker() {
         </PDFDownloadLink>
       );
     }
-    // return (
-    //   <PDFDownloadLink
-    //     document={<ExpenseReceiptPDF {...data} />}
-    //     fileName={`expense-report-${
-    //       new Date().toISOString().split("T")[0]
-    //     }.pdf`}
-    //   >
-    //     {({ loading }) => (
-    //       <button className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
-    //         <FileText className="h-4 w-4" />
-    //         <span>{loading ? "Generating..." : "Download PDF"}</span>
-    //       </button>
-    //     )}
-    //   </PDFDownloadLink>
-    // );
   };
 
   const displayActionButtonsUI = () => (
@@ -923,7 +907,6 @@ export default function ExpenseTracker() {
     </div>
   );
 
-  // return <>{renderDownloadButton()}</>;
   // Show user management if no users exist
   if (users.length === 0 && !showUserManagement) {
     return (
