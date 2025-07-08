@@ -1,6 +1,6 @@
 # RJ Expense Splitter 💰
 
-A modern, user-friendly web application for splitting expenses among friends, roommates, or travel groups. Built with React.js and Tailwind CSS, featuring professional PDF receipt generation.
+A modern, user-friendly web application for splitting expenses among friends, roommates, or travel groups. Built with Next.js and Tailwind CSS, featuring professional PDF receipt generation.
 
 ## 🎯 Purpose
 
@@ -58,6 +58,7 @@ When you're out with friends, traveling in groups, or sharing living expenses, k
     "dependencies": {
     "@react-pdf/renderer": "^4.3.0",
     "lucide-react": "^0.525.0",
+    "moment": "^2.30.1",
     "next": "15.2.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

@@ -8,6 +8,15 @@ import {
   StyleSheet,
   Font,
 } from "@react-pdf/renderer";
+import {
+  formatDateForPDF,
+  formatTimeForPDF,
+  formatCurrency,
+  PDF_TITLE,
+  PDF_SUBTITLE,
+  PDF_FOOTER_TEXT,
+  PDF_FOOTER_SUBTEXT,
+} from "../constants";
 
 Font.register({
   family: "NotoSans",
@@ -21,7 +30,6 @@ const styles = StyleSheet.create({
     padding: 35,
     fontFamily: "NotoSans",
   },
-
   // Header
   header: {
     textAlign: "center",
@@ -41,14 +49,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#666666",
   },
-
   // Divider
   divider: {
     height: 2,
     backgroundColor: "#000000",
     marginVertical: 15,
   },
-
   // Section
   section: {
     marginBottom: 20,
@@ -59,7 +65,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textTransform: "uppercase",
   },
-
   // Simple expense list
   expenseList: {
     marginBottom: 15,
@@ -92,7 +97,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "bold",
   },
-
   // Total line
   totalLine: {
     flexDirection: "row",
@@ -104,7 +108,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 14,
   },
-
   // Balance list
   balanceList: {
     marginBottom: 15,
@@ -125,7 +128,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "bold",
   },
-
   // Settlement list
   settlementList: {
     marginBottom: 15,
@@ -147,7 +149,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#856404",
   },
-
   // Footer
   footer: {
     position: "absolute",
@@ -160,27 +161,32 @@ const styles = StyleSheet.create({
   },
 });
 
-const ExpenseReceiptPDF = ({ expenses, users, balances, settlements }) => {
+const ExpenseReceiptPDF = ({
+  expenses,
+  users,
+  balances,
+  settlements,
+  generatedAt,
+}) => {
   const getTotalExpenses = () =>
     expenses.reduce((total, expense) => total + expense.amount, 0);
-
-  const formatDate = (dateString) =>
-    new Date(dateString).toLocaleDateString("en-IN");
-
-  const formatCurrency = (amount) =>
-    `₹${amount.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
 
   const getPaymentDetails = (expense) => {
     if (
       expense.paymentAmounts &&
       Object.keys(expense.paymentAmounts).length > 0
     ) {
-      return Object.entries(expense.paymentAmounts)
-        .map(([payer, amount]) => `${payer}: ₹${amount}`)
-        .join(", ");
+      const validPayments = Object.entries(expense.paymentAmounts).filter(
+        ([payer, amount]) => Number(amount) > 0
+      );
+
+      if (validPayments.length > 0) {
+        return validPayments
+          .map(
+            ([payer, amount]) => `${payer}: ${formatCurrency(Number(amount))}`
+          )
+          .join(", ");
+      }
     }
     return expense.paidBy.join(", ");
   };
@@ -190,17 +196,15 @@ const ExpenseReceiptPDF = ({ expenses, users, balances, settlements }) => {
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>EXPENSE RECEIPT</Text>
-          <Text style={styles.subtitle}>Group Settlement Summary</Text>
+          <Text style={styles.title}>{PDF_TITLE}</Text>
+          <Text style={styles.subtitle}>{PDF_SUBTITLE}</Text>
           <Text style={styles.receiptInfo}>
-            {new Date().toLocaleDateString("en-IN")} •{" "}
-            {new Date().toLocaleTimeString("en-IN")}
+            {formatDateForPDF(generatedAt)} • {formatTimeForPDF(generatedAt)}
           </Text>
           <Text style={styles.receiptInfo}>
             {users.length} participants • {expenses.length} expenses
           </Text>
         </View>
-
         <View style={styles.divider} />
 
         {/* Expenses */}
@@ -226,8 +230,8 @@ const ExpenseReceiptPDF = ({ expenses, users, balances, settlements }) => {
                       {expense.description}
                     </Text>
                     <Text style={styles.expenseDetails}>
-                      {formatDate(expense.date)} • {expense.category} • Paid by:{" "}
-                      {getPaymentDetails(expense)}
+                      {formatDateForPDF(expense.date)} • {expense.category} •
+                      Paid by: {getPaymentDetails(expense)}
                     </Text>
                   </View>
                   <View style={styles.expenseRight}>
@@ -239,13 +243,11 @@ const ExpenseReceiptPDF = ({ expenses, users, balances, settlements }) => {
               ))
             )}
           </View>
-
           <View style={styles.totalLine}>
             <Text>TOTAL</Text>
             <Text>{formatCurrency(getTotalExpenses())}</Text>
           </View>
         </View>
-
         <View style={styles.divider} />
 
         {/* Balances */}
@@ -256,6 +258,7 @@ const ExpenseReceiptPDF = ({ expenses, users, balances, settlements }) => {
               const balance = balances[user] || 0;
               const isPositive = balance > 0.01;
               const isNegative = balance < -0.01;
+
               return (
                 <View key={user} style={styles.balanceItem}>
                   <Text style={styles.balanceName}>
@@ -286,7 +289,6 @@ const ExpenseReceiptPDF = ({ expenses, users, balances, settlements }) => {
             })}
           </View>
         </View>
-
         <View style={styles.divider} />
 
         {/* Settlements */}
@@ -318,10 +320,9 @@ const ExpenseReceiptPDF = ({ expenses, users, balances, settlements }) => {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text>Generated by RJ Expense Splitter</Text>
+          <Text>{PDF_FOOTER_TEXT}</Text>
           <Text>
-            Receipt ID: {Date.now().toString().slice(-8)} • Keep for your
-            records
+            Receipt ID: {Date.now().toString().slice(-8)} • {PDF_FOOTER_SUBTEXT}
           </Text>
         </View>
       </Page>

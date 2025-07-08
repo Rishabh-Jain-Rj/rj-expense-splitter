@@ -17,6 +17,20 @@ import {
 } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import ExpenseReceiptPDF from "./ExpenseReceiptPDF";
+import {
+  formatDate,
+  formatDateForInput,
+  formatDateForDisplay,
+  formatCurrency,
+  getCurrentDate,
+  getCurrentDateTime,
+  CATEGORIES,
+  APP_NAME,
+  APP_TAGLINE,
+  MIN_USERS_REQUIRED,
+  BALANCE_THRESHOLD,
+  MESSAGES,
+} from "../constants";
 
 export default function ExpenseTracker() {
   const [users, setUsers] = useState([]);
@@ -29,23 +43,13 @@ export default function ExpenseTracker() {
 
   const [newExpense, setNewExpense] = useState({
     paidBy: [],
-    paymentAmounts: {}, // Store individual payment amounts
+    paymentAmounts: {},
     amount: "",
     description: "",
     participants: [],
-    date: new Date().toISOString().split("T")[0],
-    category: "Food",
+    date: getCurrentDate(),
+    category: CATEGORIES[0],
   });
-
-  const CATEGORIES = [
-    "Food",
-    "Transport",
-    "Accommodation",
-    "Entertainment",
-    "Shopping",
-    "Bills",
-    "Other",
-  ];
 
   // User Management Functions
   const handleAddUser = () => {
@@ -122,9 +126,9 @@ export default function ExpenseTracker() {
     const creditors = [];
 
     Object.entries(balances).forEach(([person, balance]) => {
-      if (balance > 0.01) {
+      if (balance > BALANCE_THRESHOLD) {
         creditors.push({ person, amount: balance });
-      } else if (balance < -0.01) {
+      } else if (balance < -BALANCE_THRESHOLD) {
         debtors.push({ person, amount: Math.abs(balance) });
       }
     });
@@ -141,7 +145,7 @@ export default function ExpenseTracker() {
       const credit = creditors[j].amount;
       const settlement = Math.min(debt, credit);
 
-      if (settlement > 0.01) {
+      if (settlement > BALANCE_THRESHOLD) {
         settlements.push({
           from: debtors[i].person,
           to: creditors[j].person,
@@ -152,8 +156,8 @@ export default function ExpenseTracker() {
       debtors[i].amount -= settlement;
       creditors[j].amount -= settlement;
 
-      if (debtors[i].amount < 0.01) i++;
-      if (creditors[j].amount < 0.01) j++;
+      if (debtors[i].amount < BALANCE_THRESHOLD) i++;
+      if (creditors[j].amount < BALANCE_THRESHOLD) j++;
     }
 
     return settlements;
@@ -166,7 +170,7 @@ export default function ExpenseTracker() {
       newExpense.paidBy.length === 0 ||
       newExpense.participants.length === 0
     ) {
-      alert("Please fill all required fields");
+      alert(MESSAGES.FILL_REQUIRED_FIELDS);
       return;
     }
 
@@ -176,10 +180,8 @@ export default function ExpenseTracker() {
         (sum, amount) => sum + Number(amount || 0),
         0
       );
-      if (Math.abs(totalPaid - Number(newExpense.amount)) > 0.01) {
-        alert(
-          `Total payment amounts (₹${totalPaid}) must equal the expense amount (₹${newExpense.amount})`
-        );
+      if (Math.abs(totalPaid - Number(newExpense.amount)) > BALANCE_THRESHOLD) {
+        alert(MESSAGES.PAYMENT_MISMATCH(totalPaid, newExpense.amount));
         return;
       }
     }
@@ -210,8 +212,8 @@ export default function ExpenseTracker() {
       amount: "",
       description: "",
       participants: [],
-      date: new Date().toISOString().split("T")[0],
-      category: "Food",
+      date: getCurrentDate(),
+      category: CATEGORIES[0],
     });
     setShowAddForm(false);
     setMultiPayerMode(false);
@@ -227,7 +229,7 @@ export default function ExpenseTracker() {
   };
 
   const handleDeleteExpense = (id) => {
-    if (confirm("Are you sure you want to delete this expense?")) {
+    if (confirm(MESSAGES.CONFIRM_DELETE)) {
       setExpenses(expenses.filter((exp) => exp.id !== id));
     }
   };
@@ -295,18 +297,14 @@ export default function ExpenseTracker() {
         <div className="flex items-center space-x-3">
           <Receipt className="h-8 w-8" />
           <div>
-            <h1 className="md:text-3xl text-base font-bold">
-              RJ Expense Splitter
-            </h1>
-            <p className="text-blue-100 text-xs md:text-base">
-              Split expenses with friends easily
-            </p>
+            <h1 className="md:text-3xl text-base font-bold">{APP_NAME}</h1>
+            <p className="text-blue-100 text-xs md:text-base">{APP_TAGLINE}</p>
           </div>
         </div>
         <div className="text-right">
           <div className="text-sm opacity-90">Total Expenses</div>
           <div className="text-2xl font-bold">
-            ₹{getTotalExpenses().toLocaleString()}
+            {formatCurrency(getTotalExpenses())}
           </div>
           <div className="text-sm opacity-90">{users.length} participants</div>
         </div>
@@ -324,12 +322,13 @@ export default function ExpenseTracker() {
               users={users}
               balances={calculateBalances()}
               settlements={calculateSettlements()}
-              generatedAt={new Date()}
+              generatedAt={getCurrentDateTime()}
             />
           }
-          fileName={`expense-report-${
-            new Date().toISOString().split("T")[0]
-          }.pdf`}
+          fileName={`expense-report-${formatDate(
+            new Date(),
+            "YYYY-MM-DD"
+          )}.pdf`}
         >
           {({ loading }) => (
             <button className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors">
@@ -353,7 +352,7 @@ export default function ExpenseTracker() {
       </button>
       <button
         onClick={() => setShowAddForm(true)}
-        disabled={users.length < 2}
+        disabled={users.length < MIN_USERS_REQUIRED}
         className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors"
       >
         <Plus className="h-4 w-4" />
@@ -404,10 +403,7 @@ export default function ExpenseTracker() {
               Current Users
             </label>
             {users.length === 0 ? (
-              <p className="text-gray-500 text-sm">
-                No users added yet. Add at least 2 users to start tracking
-                expenses.
-              </p>
+              <p className="text-gray-500 text-sm">{MESSAGES.NO_USERS}</p>
             ) : (
               <div className="space-y-2">
                 {users.map((user) => (
@@ -513,7 +509,7 @@ export default function ExpenseTracker() {
               <label className="block text-sm font-medium mb-1">Date</label>
               <input
                 type="date"
-                value={newExpense.date}
+                value={formatDateForInput(newExpense.date)}
                 onChange={(e) =>
                   setNewExpense({ ...newExpense, date: e.target.value })
                 }
@@ -567,10 +563,12 @@ export default function ExpenseTracker() {
 
               {multiPayerMode && newExpense.paidBy.length > 0 && (
                 <div className="text-xs text-gray-600 mt-1">
-                  Total paid: ₹
-                  {Object.values(newExpense.paymentAmounts).reduce(
-                    (sum, amount) => sum + Number(amount || 0),
-                    0
+                  Total paid:{" "}
+                  {formatCurrency(
+                    Object.values(newExpense.paymentAmounts).reduce(
+                      (sum, amount) => sum + Number(amount || 0),
+                      0
+                    )
                   )}
                 </div>
               )}
@@ -661,8 +659,8 @@ export default function ExpenseTracker() {
       {expenses.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <Receipt className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p>No expenses added yet</p>
-          <p className="text-sm">Add your first expense to get started</p>
+          <p>{MESSAGES.NO_EXPENSES}</p>
+          <p className="text-sm">{MESSAGES.NO_EXPENSES_SUBTITLE}</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -686,7 +684,7 @@ export default function ExpenseTracker() {
                   className="border-b border-gray-100 hover:bg-gray-50"
                 >
                   <td className="py-3 px-2 text-sm text-gray-600">
-                    {new Date(expense.date).toLocaleDateString()}
+                    {formatDateForDisplay(expense.date)}
                   </td>
                   <td className="py-3 px-2 font-medium">
                     {expense.description}
@@ -705,9 +703,13 @@ export default function ExpenseTracker() {
                         >
                           {payer}
                           {expense.paymentAmounts &&
-                            expense.paymentAmounts[payer] && (
+                            Object.keys(expense.paymentAmounts).length > 0 &&
+                            expense.paymentAmounts[payer] &&
+                            Number(expense.paymentAmounts[payer]) > 0 && (
                               <span className="ml-1 font-semibold">
-                                ₹{expense.paymentAmounts[payer]}
+                                {formatCurrency(
+                                  Number(expense.paymentAmounts[payer])
+                                )}
                               </span>
                             )}
                         </span>
@@ -715,7 +717,7 @@ export default function ExpenseTracker() {
                     </div>
                   </td>
                   <td className="py-3 px-2 text-right font-semibold">
-                    ₹{expense.amount.toLocaleString()}
+                    {formatCurrency(expense.amount)}
                   </td>
                   <td className="py-3 px-2">
                     <div className="flex flex-wrap gap-1">
@@ -730,7 +732,9 @@ export default function ExpenseTracker() {
                     </div>
                   </td>
                   <td className="py-3 px-2 text-right text-sm text-gray-600">
-                    ₹{(expense.amount / expense.participants.length).toFixed(2)}
+                    {formatCurrency(
+                      expense.amount / expense.participants.length
+                    )}
                   </td>
                   <td className="py-3 px-2">
                     <div className="flex space-x-1 justify-center">
@@ -782,9 +786,7 @@ export default function ExpenseTracker() {
             return (
               <div key={category} className="p-3 bg-gray-50 rounded-lg">
                 <div className="text-sm text-gray-600">{category}</div>
-                <div className="text-lg font-bold">
-                  ₹{total.toLocaleString()}
-                </div>
+                <div className="text-lg font-bold">{formatCurrency(total)}</div>
                 <div className="text-xs text-gray-500">{percentage}%</div>
               </div>
             );
@@ -809,8 +811,8 @@ export default function ExpenseTracker() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {users.map((user) => {
             const balance = balances[user];
-            const isPositive = balance > 0.01;
-            const isNegative = balance < -0.01;
+            const isPositive = balance > BALANCE_THRESHOLD;
+            const isNegative = balance < -BALANCE_THRESHOLD;
 
             return (
               <div
@@ -834,7 +836,8 @@ export default function ExpenseTracker() {
                         : "text-gray-600"
                     }`}
                   >
-                    {isPositive ? "+" : ""}₹{Math.abs(balance).toFixed(2)}
+                    {isPositive ? "+" : ""}
+                    {formatCurrency(Math.abs(balance))}
                   </div>
                   <div className="text-sm text-gray-600">
                     {isPositive ? "Gets back" : isNegative ? "Owes" : "Settled"}
@@ -863,8 +866,10 @@ export default function ExpenseTracker() {
         {settlements.length === 0 ? (
           <div className="text-center py-8 text-green-600">
             <Calculator className="h-12 w-12 mx-auto mb-3" />
-            <p className="text-lg font-semibold">All settled! 🎉</p>
-            <p className="text-sm text-gray-600">No one owes anyone money</p>
+            <p className="text-lg font-semibold">{MESSAGES.ALL_SETTLED}</p>
+            <p className="text-sm text-gray-600">
+              {MESSAGES.ALL_SETTLED_SUBTITLE}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -888,7 +893,7 @@ export default function ExpenseTracker() {
                   </div>
                 </div>
                 <div className="text-xl font-bold text-yellow-700">
-                  ₹{settlement.amount.toFixed(2)}
+                  {formatCurrency(settlement.amount)}
                 </div>
               </div>
             ))}
@@ -901,7 +906,7 @@ export default function ExpenseTracker() {
   const displayFooterUI = () => (
     <div className="mt-8 text-center text-gray-500 text-sm">
       <p>
-        Generated by RJ Expense Splitter • {new Date().toLocaleDateString()}
+        Generated by {APP_NAME} • {formatDateForDisplay(new Date())}
       </p>
       <p className="mt-1">Split expenses fairly and transparently</p>
     </div>
@@ -915,11 +920,9 @@ export default function ExpenseTracker() {
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">
             <Users className="h-16 w-16 mx-auto mb-4 text-gray-400" />
             <h2 className="text-2xl font-bold mb-2">
-              Welcome to RJ Expense Splitter
+              {MESSAGES.WELCOME_TITLE}
             </h2>
-            <p className="text-gray-600 mb-6">
-              Add at least 2 users to start tracking and splitting expenses
-            </p>
+            <p className="text-gray-600 mb-6">{MESSAGES.WELCOME_SUBTITLE}</p>
             <button
               onClick={() => setShowUserManagement(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
